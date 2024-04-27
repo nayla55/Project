@@ -1,0 +1,48 @@
+import cv2
+import numpy as np
+
+# Load the pre-trained ONNX model using opencv.
+net = cv2.dnn.readNetFromONNX("model.onnx")
+
+# Initialize the input image and obtain its shape.
+input_image = cv2.imread("image.jpg")
+height, width, _ = input_image.shape
+
+# Prepare the input blob for the model.
+blob = cv2.dnn.blobFromImage(input_image, size=(600, 600), mean=(0, 0, 0), swapRB=True, crop=False)
+net.setInput(blob)
+
+# Forward pass through the model and obtain the predictions.
+predictions = net.forward()
+
+# Initialize a variable to keep track of whether an object is detected or not.
+object_detected = False
+
+# Loop through the predictions.
+for i in range(predictions.shape[2]):
+    confidence = predictions[0, 0, i, 2]
+
+    # Filter out weak predictions.
+    if confidence > 0.5:
+        object_detected = True
+
+        # Get the bounding box coordinates for the object.
+        box = predictions[0, 0, i, 3:7] * np.array([width, height, width, height])
+        startX, startY, endX, endY = box.astype("int")
+
+        # Draw the bounding box around the detected object.
+        cv2.rectangle(input_image, (startX, startY), (endX, endY), (0, 255, 0), 2)
+
+        # Display the confidence score of the object detection.
+        label = f"{confidence:.2f}"
+        y = startY - 10 if startY - 10 > 10 else startY + 10
+        cv2.putText(input_image, label, (startX, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+# If no object is detected, display the message "Tidak Ada Objek".
+if not object_detected:
+    cv2.putText(input_image, "Tidak Ada Objek", (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+
+# Show the input image with the bounding box around the detected object.
+cv2.imshow("Image", input_image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
